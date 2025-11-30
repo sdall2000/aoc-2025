@@ -28,6 +28,26 @@ pub fn read_numbers_from_file<P: AsRef<Path>>(path: P) -> Result<Vec<i32>, Box<d
     Ok(values)
 }
 
+/// Read a text file and return each non-empty line as a `Vec<String>`.
+///
+/// Empty lines are ignored. IO errors return an `Err`.
+pub fn read_lines_from_file<P: AsRef<Path>>(path: P) -> Result<Vec<String>, Box<dyn Error>> {
+    let file = File::open(path)?;
+    let reader = BufReader::new(file);
+    let mut lines = Vec::new();
+
+    for line_res in reader.lines() {
+        let line = line_res?;
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        lines.push(trimmed.to_string());
+    }
+
+    Ok(lines)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -49,5 +69,16 @@ mod tests {
 
         let numbers = read_numbers_from_file(&path).expect("read failed");
         assert_eq!(numbers, vec![10, 20, 30, 40]);
+    }
+
+    #[test]
+    fn read_lines_from_file_parses_lines() {
+        let tmp_dir = env::temp_dir();
+        let path = tmp_dir.join("utils_test_lines.txt");
+        let contents = "alpha\nbeta\n\ngamma\n";
+        write(&path, contents).expect("failed to write temp file");
+
+        let lines = read_lines_from_file(&path).expect("read failed");
+        assert_eq!(lines, vec!["alpha".to_string(), "beta".to_string(), "gamma".to_string()]);
     }
 }
